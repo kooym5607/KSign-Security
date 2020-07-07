@@ -542,91 +542,6 @@ class ARIAEngine {
     }
   }
 
-  public static void ARIA_test(byte[] p,int keySize,byte[] mk) throws InvalidKeyException {
-
-    PrintStream out=System.out;
-
-    byte[] c = new byte[16];
-
-    boolean flag=false;
-
-    ARIAEngine instance = new ARIAEngine(keySize);
-
-    instance.setKey(mk);
-    instance.setupRoundKeys();
-    out.print("  masterkey: "); printBlock(out, mk); out.println();
-    out.print("  plaintext : "); printBlock(out, p); out.println();
-    instance.encrypt(p, 0, c, 0);
-    out.print("  ciphertext: "); printBlock(out, c); out.println();
-    instance.decrypt(c, 0, p, 0);
-    out.print("  decrypted : "); printBlock(out, p); out.println();
-    
-//    int TEST_NUM = 0x800000;
-//
-//    for (int i = 0; i < 16; i++) mk[i] = (byte)i;
-//    out.println("\n  First, EncKeySetup():");
-//    out.print("  masterkey: "); printBlock(out, mk); out.println();
-//    instance.reset();
-//    instance.setKeySize(keySize);
-//    instance.setKey(mk);
-//    for (int i = 0 ; i < 1000; i++) instance.setupEncRoundKeys();  // allow the CPU to settle down
-//    for (int i=0; i< TEST_NUM; i++) instance.setupEncRoundKeys();
-//    out.print("  plaintext : "); printBlock(out, p); out.println();
-//
-//    out.println("  Next, Crypt():");
-//    for (int i=0; i<1000; i++) instance.encrypt(p, 0, c, 0);
-//    for (int i=0; i< TEST_NUM; i++) instance.encrypt(p, 0, c, 0);
-//    out.print("  ciphertext: "); printBlock(out, c); out.println();
-//    out.println("  Finally, DecKeySetup():");
-//    instance.decrypt(c, 0, p, 0);
-//
-//    for (int i = 0 ; i < 1000; i++) instance.setupDecRoundKeys();  // allow the CPU to settle down
-//    for (int i=0; i< TEST_NUM; i++) instance.setupDecRoundKeys();
-//    out.print("  decrypted : "); printBlock(out, p); out.println();
-  }
-  public static void ARIA_test(String str,int keySize, byte[] mk) throws InvalidKeyException {
-
-    PrintStream out=System.out;
-    byte[] p = new byte[16];
-    p = StrToByte(str);
-    byte[] c = new byte[16];
-
-    boolean flag=false;
-
-    ARIAEngine instance = new ARIAEngine(keySize);
-
-    instance.setKey(mk);
-    instance.setupRoundKeys();
-    out.print("  masterkey: "); printBlock(out, mk); out.println();
-    out.print("  plaintext : "); printBlock(out, p); out.println();
-    instance.encrypt(p, 0, c, 0);
-    out.print("  ciphertext: "); printBlock(out, c); out.println();
-    instance.decrypt(c, 0, p, 0);
-    out.print("  decrypted : "); printBlock(out, p); out.println();
-
-//    int TEST_NUM = 0x800000;
-//
-//    for (int i = 0; i < 16; i++) mk[i] = (byte)i;
-//    out.println("\n  First, EncKeySetup():");
-//    out.print("  masterkey: "); printBlock(out, mk); out.println();
-//    instance.reset();
-//    instance.setKeySize(keySize);
-//    instance.setKey(mk);
-//    for (int i = 0 ; i < 1000; i++) instance.setupEncRoundKeys();  // allow the CPU to settle down
-//    for (int i=0; i< TEST_NUM; i++) instance.setupEncRoundKeys();
-//    out.print("  plaintext : "); printBlock(out, p); out.println();
-//
-//    out.println("  Next, Crypt():");
-//    for (int i=0; i<1000; i++) instance.encrypt(p, 0, c, 0);
-//    for (int i=0; i< TEST_NUM; i++) instance.encrypt(p, 0, c, 0);
-//    out.print("  ciphertext: "); printBlock(out, c); out.println();
-//    out.println("  Finally, DecKeySetup():");
-//    instance.decrypt(c, 0, p, 0);
-//
-//    for (int i = 0 ; i < 1000; i++) instance.setupDecRoundKeys();  // allow the CPU to settle down
-//    for (int i=0; i< TEST_NUM; i++) instance.setupDecRoundKeys();
-//    out.print("  decrypted : "); printBlock(out, p); out.println();
-  }
   public static void ECB(byte[] key, byte[] plain, int keySize) throws InvalidKeyException {
     PrintStream out=System.out;
 
@@ -638,9 +553,8 @@ class ARIAEngine {
 
     out.print("  masterkey: "); printBlock(out, key); out.println();
     out.print("  plaintext : "); printBlock(out, plain); out.println();
-    for(int i=0;i<1000;i++){
-      aria.encrypt(plain, 0, cipher, 0);
-    }
+
+    aria.encrypt(plain, 0, cipher, 0);
     out.print("  ciphertext: "); printBlock(out, cipher); out.println();
   }
 
@@ -656,23 +570,18 @@ class ARIAEngine {
 
     out.print("  masterkey: "); printBlock(out, key); out.println();
     out.print("  plaintext : "); printBlock(out, plain); out.println();
-    for(int i=0;i<1000;i++){
-      aria.encrypt(plain, 0, cipher, 0);
-    }
+
+    aria.encrypt(plain, 0, cipher, 0);
     out.print("  ciphertext: "); printBlock(out, cipher); out.println();
   }
 }
 
-/*
- * Frontend class ARIA
- * Currently, it provides only a simple text.*/
- 
 public class ARIA {
 
   public static void main (String args[]) throws InvalidKeyException {
     Scanner input = new Scanner(System.in);
     PrintStream out=System.out;
-    out.println("             <<<<< ECB모드 >>>>>\n");
+    out.println("\n             <<<<< ECB모드 >>>>>\n");
     out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
     int keySize = input.nextInt();
     input.nextLine();
@@ -696,10 +605,8 @@ public class ARIA {
       temp = input.next();
       ARIAEngine.ECB(mk,temp,keySize);
     }
-
     input.close();
     out.close();
-
   }
 }
 
