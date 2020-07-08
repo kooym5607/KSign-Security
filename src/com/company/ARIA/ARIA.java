@@ -10,7 +10,7 @@
 //  Copyright 2005 NSRI. All rights reserved.
 //
 
-package com.company;
+package com.company.ARIA;
 
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
@@ -590,202 +590,6 @@ class ARIAEngine {
     return plain_block;
   }
 
-  protected static byte[][] ECB_enc(ARIAEngine aria, byte[][] plain_block) throws InvalidKeyException {
-    byte[][] cipher_block = new byte[10][16];
-    for(int i=0;i<plain_block.length;i++)
-        aria.encrypt(plain_block[i], 0, cipher_block[i], 0);
-    return cipher_block;
-  }
-  protected static byte[][] ECB_dec(ARIAEngine aria, byte[][] cipher_block) throws InvalidKeyException {
-    byte[][] plain_block = new byte[10][16];
-    for(int i=0;i<cipher_block.length;i++)
-      aria.decrypt(cipher_block[i],0,plain_block[i],0);
-    return plain_block;
-  }
-  public static void ECB(PrintStream out, Scanner input) throws InvalidKeyException {
-    byte[][] plain_block = new byte[10][16];
-    byte[][] cipher_block = new byte[10][16];
-    out.println("             <<<<< ECB모드 >>>>>\n");
-
-    out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
-    int keySize = input.nextInt();
-    input.nextLine();
-
-    out.println("사용할 암호키 입력.");
-    byte[] key = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ",""));
-
-    out.println("bit 평문(1입력) / 스트링 평문(2입력)");
-    int idx = input.nextInt();
-    input.nextLine();
-    plain_block = InputPlain(out,input,idx);
-
-    ARIAEngine aria = new ARIAEngine(keySize);
-    aria.setKey(key);
-    aria.setupRoundKeys();
-
-    out.print("\n  masterkey: "); printBlock(out, key); out.println();
-    out.print("  plaintext : \n");
-    printBlock(out,plain_block);
-
-    // ECB 모드 암호화
-    cipher_block = ECB_enc(aria,plain_block);
-
-    out.print("  ciphertext: \n");
-    printBlock(out,cipher_block);
-
-    // ECB 모드 복호화
-    plain_block = ECB_dec(aria,cipher_block);
-
-    out.print("  복호화한 plaintext: \n");
-    printBlock(out,plain_block);
-  }
-
-  // CBC 모드
-  protected static byte[][] CBC_enc(ARIAEngine aria, byte[] primeVec, byte[][] plain_block) throws InvalidKeyException {
-    byte[] xor = new byte[16];
-    byte[][] cipher_block = new byte[10][16];
-    for (int i = 0; i < plain_block.length; i++) { // 초기 벡터와 이전 암호문을 이용한 xor.
-      if(i==0) {
-        for (int j = 0; j < 16; j++) {
-          xor[j] = (byte) (primeVec[j] ^ plain_block[i][j]);
-        }
-        aria.encrypt(xor, 0, cipher_block[i], 0);
-      }
-      else{
-        for (int j = 0; j < 16; j++) {
-          xor[j] = (byte) (cipher_block[i-1][j] ^ plain_block[i][j]);
-        }
-        aria.encrypt(xor, 0, cipher_block[i], 0);
-      }
-    }
-    return plain_block;
-  }
-  protected static byte[][] CBC_dec(ARIAEngine aria, byte[] primeVec, byte[][] cipher_block) throws InvalidKeyException {
-    byte[] xor = new byte[16];
-    byte[][] plain_block = new byte[10][16];
-    for(int i=0;i<cipher_block.length;i++){
-      aria.decrypt(cipher_block[i],0,xor,0);
-      if (i == 0)
-        for(int j=0;j<16;j++)
-          plain_block[i][j] = (byte) (primeVec[j] ^ cipher_block[i][j]);
-      else
-        for(int j=0;j<16;j++)
-          plain_block[i][j] = (byte) (cipher_block[i-1][j] ^ xor[j]);
-    }
-    return plain_block;
-  }
-  public static void CBC(PrintStream out, Scanner input) throws InvalidKeyException {
-    byte[][] plain_block;
-    byte[][] cipher_block;
-
-    out.println("             <<<<< CBC모드 >>>>>\n");
-    out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
-    int keySize = input.nextInt();
-    input.nextLine();
-
-    out.println("사용할 암호키 입력.");
-    byte[] key = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
-
-    out.println("초기 벡터(IV) 입력.");
-    byte[] primeVec = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
-
-    out.println("bit 평문(1입력) / 스트링 평문(2입력)");
-    int idx = input.nextInt();
-    input.nextLine();
-
-    plain_block = InputPlain(out,input,idx);
-
-    ARIAEngine aria = new ARIAEngine(keySize);
-    aria.setKey(key);
-    aria.setupRoundKeys();
-
-    out.print("\n  masterkey: ");
-    printBlock(out, key);
-    out.println();
-    out.print("  plaintext : \n");
-    printBlock(out,plain_block);
-    //CBC모드 암호화
-    cipher_block = CBC_enc(aria,primeVec,plain_block);
-
-    out.print("  ciphertext: \n");
-    printBlock(out,cipher_block);
-
-    //CBC모드 복호화
-    plain_block = CBC_dec(aria,primeVec,cipher_block);
-
-    out.print("  복호화한 plaintext: \n");
-    printBlock(out,plain_block);
-  }
-
-  //CTR 모드
-  protected static byte[][] CTR_enc(ARIAEngine aria,byte[][] counter,byte[][] plain_block) throws InvalidKeyException {
-    byte[] xor = new byte[16];
-    byte[][] cipher_block = new byte[10][16];
-    for (int i = 0; i < plain_block.length; i++) { // 1씩 증가하는 카운터를 입력으로 하여 xor연산
-      aria.encrypt(counter[i], 0, xor, 0);
-      for (int j = 0; j < 16; j++) {
-        cipher_block[i][j] = (byte) (xor[j] ^ plain_block[i][j]);
-      }
-    }
-    return cipher_block;
-  }
-  protected static byte[][] CTR_dec(ARIAEngine aria, byte[][] counter, byte[][] cipher_block) throws InvalidKeyException {
-    byte[] xor = new byte[16];
-    byte[][] plain_block = new byte[10][16];
-    for(int i=0;i<cipher_block.length;i++){
-      aria.encrypt(counter[i],0,xor,0);
-      for(int j=0;j<16;j++)
-        plain_block[i][j] = (byte)(xor[j]^cipher_block[i][j]);
-    }
-    return plain_block;
-  }
-  public static void CTR(PrintStream out, Scanner input) throws InvalidKeyException {
-    byte[][] plain_block = new byte[10][16];
-    byte[][] cipher_block;
-    byte[][] counter = new byte[10][16];
-    for(int i=0;i<counter.length;i++){
-      counter[i][15] = (byte)i;
-      counter[i][14] = (byte)(i>>8);
-      counter[i][13] = (byte)(i>>16);
-      counter[i][12] = (byte)(i>>24);
-    }
-    out.println("             <<<<< CTR모드 >>>>>\n");
-    out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
-    int keySize = input.nextInt();
-    input.nextLine();
-
-    out.println("사용할 암호키 입력.");
-    byte[] key = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
-
-    out.println("bit 평문(1입력) / 스트링 평문(2입력)");
-    int idx = input.nextInt();
-    input.nextLine();
-
-    plain_block = InputPlain(out,input,idx);
-
-    ARIAEngine aria = new ARIAEngine(keySize);
-    aria.setKey(key);
-    aria.setupRoundKeys();
-
-    out.print("\n  masterkey: ");
-    printBlock(out, key);
-    out.println();
-    out.print("  plaintext : \n");
-    printBlock(out,plain_block);
-
-    //CTR모드 암호화
-    cipher_block = CTR_enc(aria,counter,plain_block);
-
-    out.print("  ciphertext: \n");
-    printBlock(out,cipher_block);
-
-    // CTR모드 복호화
-    plain_block = CTR_dec(aria,counter,cipher_block);
-
-    out.print("  복호화한 plaintext: \n");
-    printBlock(out,plain_block);
-  }
-
   /*
   public static void CFB(PrintStream out, Scanner input) throws InvalidKeyException {
     byte[][] plain_block = new byte[10][16];
@@ -867,11 +671,11 @@ public class ARIA {
     out.println("--- 모드를 설정해주세요 ---\n 1 - ECB / 2 - CBC / 3 - CTR");
     int mode = input.nextInt();
     switch(mode){
-      case 1: ARIAEngine.ECB(out,input);
+      case 1: Aria_ECB.ECB(out,input);
       break;
-      case 2: ARIAEngine.CBC(out,input);
+      case 2: Aria_CBC.CBC(out,input);
       break;
-      case 3: ARIAEngine.CTR(out,input);
+      case 3: Aria_CTR.CTR(out,input);
     }
 
     input.close();
