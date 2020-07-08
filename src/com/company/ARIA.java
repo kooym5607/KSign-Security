@@ -511,7 +511,15 @@ class ARIAEngine {
     byteToHex(out, b[2]);
     byteToHex(out, b[3]);
   }
-  
+  static byte[] intToByteArray(int value) {
+    byte[] byteArray = new byte[4];
+    byteArray[0] = (byte)(value >> 24);
+    byteArray[1] = (byte)(value >> 16);
+    byteArray[2] = (byte)(value >> 8);
+    byteArray[3] = (byte)(value);
+    return byteArray;
+  }
+
   private static void printRoundKeys(PrintStream out, int[] roundKeys) {
     for (int i=0; i<roundKeys.length; ) { out.print("* ");
       intToHex(out, roundKeys[i++]); out.print(" ");
@@ -555,6 +563,7 @@ class ARIAEngine {
     }
     return result;
   }
+
   public static void ECB(PrintStream out, Scanner input) throws InvalidKeyException {
     byte[][] plain_block = new byte[10][16];
     byte[][] cipher_block = new byte[10][16];
@@ -675,7 +684,85 @@ class ARIAEngine {
       out.println();
     }
   }
+  public static void CTR(PrintStream out, Scanner input) throws InvalidKeyException {
+    byte[][] plain_block = new byte[10][16];
+    byte[][] cipher_block = new byte[10][16];
+    byte[] xor = new byte[16];
+    byte[][] counter = new byte[10][16];
+    for(int i=0;i<counter.length;i++){
+      counter[i][15] = (byte)i;
+      counter[i][14] = (byte)(i>>8);
+      counter[i][13] = (byte)(i>>16);
+      counter[i][12] = (byte)(i>>24);
+    }
+    out.println("             <<<<< CTR모드 >>>>>\n");
+    out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
+    int keySize = input.nextInt();
+    input.nextLine();
 
+    out.println("사용할 암호키 입력.");
+    byte[] key = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
+
+    out.println("bit 평문(1입력) / 스트링 평문(2입력)");
+    int idx = input.nextInt();
+    input.nextLine();
+
+    String temp;
+    if (idx == 1) {
+      out.println("암호화할 비트 평문 : ");
+      for (int i = 0; i < 10; i++) {
+        temp = input.nextLine();
+        temp = temp.replaceAll(" ", "");
+        plain_block[i] = ARIAEngine.hexStringToByteArray(temp);
+      }
+    } else if (idx == 2) {
+      out.println("암호화할 스트링 평문 : \n");
+      for (int i = 0; i < 10; i++) {
+        temp = input.next();
+        plain_block[i] = StrToByte(temp);
+      }
+    }
+
+    ARIAEngine aria = new ARIAEngine(keySize);
+    aria.setKey(key);
+    aria.setupRoundKeys();
+
+    out.print("\n  masterkey: ");
+    printBlock(out, key);
+    out.println();
+    out.print("  plaintext : \n");
+
+    //CTR모드 암호화
+    for (int i = 0; i < plain_block.length; i++) { // 1씩 증가하는 카운터를 입력으로 하여 xor연산
+      printBlock(out, plain_block[i]);
+      out.println();
+
+      aria.encrypt(counter[i], 0, xor, 0);
+      for (int j = 0; j < 16; j++) {
+        cipher_block[i][j] = (byte) (xor[j] ^ plain_block[i][j]);
+      }
+    }
+
+    out.print("  ciphertext: \n");
+    for (int i = 0; i < cipher_block.length; i++) {
+      printBlock(out, cipher_block[i]);
+      out.println();
+    }
+
+    // CTR모드 복호화
+    for(int i=0;i<plain_block.length;i++){
+      aria.encrypt(counter[i],0,xor,0);
+      for(int j=0;j<16;j++)
+        plain_block[i][j] = (byte)(xor[j]^cipher_block[i][j]);
+    }
+    out.print("  복호화한 plaintext: \n");
+    for(int i=0;i<plain_block.length;i++){
+      printBlock(out,plain_block[i]);
+      out.println();
+    }
+  }
+
+  /*
   public static void CFB(PrintStream out, Scanner input) throws InvalidKeyException {
     byte[][] plain_block = new byte[10][16];
     byte[][] cipher_block = new byte[10][16];
@@ -726,14 +813,15 @@ class ARIAEngine {
       out.println();
       if(i==0) {
         aria.encrypt(primeVec,0,MSBJ,0);
+
         for (int j = 0; j < 16; j++) {
-          cipher_block[i][j] = (byte) (MSBJ[j] ^ plain_block[i][j]);
+          cipher_block[i][j] = (byte) (byteArrToBit(MSBJ)[j] ^ plain_block[i][j]);
         }
       }
       else{
         aria.encrypt(cipher_block[i-1],0,MSBJ,0);
         for (int j = 0; j < 16; j++) {
-          cipher_block[i][j] = (byte) (MSBJ[j] ^ plain_block[i][j]);
+          cipher_block[i][j] = (byte) (byteArrToBit(MSBJ)[j] ^ plain_block[i][j]);
         }
       }
     }
@@ -744,6 +832,7 @@ class ARIAEngine {
       out.println();
     }
   }
+  */
 }
 
 public class ARIA {
@@ -751,14 +840,14 @@ public class ARIA {
     Scanner input = new Scanner(System.in);
     PrintStream out=System.out;
 
-    out.println("--- 모드를 설정해주세요 ---\n 1 - ECB / 2 - CBC / 3 - CFB");
+    out.println("--- 모드를 설정해주세요 ---\n 1 - ECB / 2 - CBC / 3 - CTR");
     int mode = input.nextInt();
     switch(mode){
       case 1: ARIAEngine.ECB(out,input);
       break;
       case 2: ARIAEngine.CBC(out,input);
       break;
-      case 3: ARIAEngine.CFB(out,input);
+      case 3: ARIAEngine.CTR(out,input);
     }
 
     input.close();
