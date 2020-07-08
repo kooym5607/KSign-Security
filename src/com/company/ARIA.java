@@ -541,7 +541,20 @@ class ARIAEngine {
       throw new InvalidKeyException(e);
     }
   }
-
+  protected static int[] byteArrToBit(byte[] byteArr){
+    int[] result = new int[128];
+    for(int i=0;i<128;i++){
+      if(i%4==0)
+        result[i] = byteArr[i/4]<<24;
+      else if(i%4==1)
+        result[i] = byteArr[i/4]<<16;
+      else if(i%4==2)
+        result[i] = byteArr[i/4]<<8;
+      else
+        result[i] = byteArr[i/4];
+    }
+    return result;
+  }
   public static void ECB(PrintStream out, Scanner input) throws InvalidKeyException {
     byte[][] plain_block = new byte[10][16];
     byte[][] cipher_block = new byte[10][16];
@@ -583,8 +596,8 @@ class ARIAEngine {
     for(int i=0;i<plain_block.length;i++) {
       printBlock(out, plain_block[i]);
       out.println();
-
-      aria.encrypt(plain_block[i], 0, cipher_block[i], 0);
+      for(int j=0;j<1000;j++)
+        aria.encrypt(plain_block[i], 0, cipher_block[i], 0);
     }
     out.print("  ciphertext: \n");
     for(int i=0;i<cipher_block.length;i++){
@@ -620,6 +633,7 @@ class ARIAEngine {
         temp = input.nextLine();
         temp = temp.replaceAll(" ", "");
         plain_block[i] = ARIAEngine.hexStringToByteArray(temp);
+
       }
     } else if (idx == 2) {
       out.println("암호화할 스트링 평문 : \n");
@@ -661,6 +675,75 @@ class ARIAEngine {
       out.println();
     }
   }
+
+  public static void CFB(PrintStream out, Scanner input) throws InvalidKeyException {
+    byte[][] plain_block = new byte[10][16];
+    byte[][] cipher_block = new byte[10][16];
+    byte[] MSBJ = new byte[16];
+
+    out.println("             <<<<< CFB모드 >>>>>\n");
+    out.println("사용할 key의 사이즈를 입력. (128 / 192 / 256)bit -> (16 / 24 / 32)byte");
+    int keySize = input.nextInt();
+    input.nextLine();
+
+    out.println("사용할 암호키 입력.");
+    byte[] key = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
+
+    out.println("초기 벡터(IV) 입력.");
+    byte[] primeVec = ARIAEngine.hexStringToByteArray(input.nextLine().replaceAll(" ", ""));
+
+    out.println("bit 평문(1입력) / 스트링 평문(2입력)");
+    int idx = input.nextInt();
+    input.nextLine();
+
+    String temp;
+    if (idx == 1) {
+      out.println("암호화할 비트 평문 : ");
+      for (int i = 0; i < 10; i++) {
+        temp = input.nextLine();
+        temp = temp.replaceAll(" ", "");
+        plain_block[i] = ARIAEngine.hexStringToByteArray(temp);
+      }
+    } else if (idx == 2) {
+      out.println("암호화할 스트링 평문 : \n");
+      for (int i = 0; i < 10; i++) {
+        temp = input.next();
+        plain_block[i] = StrToByte(temp);
+      }
+    }
+
+    ARIAEngine aria = new ARIAEngine(keySize);
+    aria.setKey(key);
+    aria.setupRoundKeys();
+
+    out.print("\n  masterkey: ");
+    printBlock(out, key);
+    out.println();
+    out.print("  plaintext : \n");
+
+    for (int i = 0; i < plain_block.length; i++) { // 이전 암호문으로 다음 평문을 만듬.
+      printBlock(out, plain_block[i]);
+      out.println();
+      if(i==0) {
+        aria.encrypt(primeVec,0,MSBJ,0);
+        for (int j = 0; j < 16; j++) {
+          cipher_block[i][j] = (byte) (MSBJ[j] ^ plain_block[i][j]);
+        }
+      }
+      else{
+        aria.encrypt(cipher_block[i-1],0,MSBJ,0);
+        for (int j = 0; j < 16; j++) {
+          cipher_block[i][j] = (byte) (MSBJ[j] ^ plain_block[i][j]);
+        }
+      }
+    }
+
+    out.print("  ciphertext: \n");
+    for (int i = 0; i < cipher_block.length; i++) {
+      printBlock(out, cipher_block[i]);
+      out.println();
+    }
+  }
 }
 
 public class ARIA {
@@ -668,13 +751,14 @@ public class ARIA {
     Scanner input = new Scanner(System.in);
     PrintStream out=System.out;
 
-    out.println(" 모드를 설정해주세요.\n 1 - EBC / 2 - CBC");
+    out.println("--- 모드를 설정해주세요 ---\n 1 - ECB / 2 - CBC / 3 - CFB");
     int mode = input.nextInt();
     switch(mode){
       case 1: ARIAEngine.ECB(out,input);
       break;
       case 2: ARIAEngine.CBC(out,input);
       break;
+      case 3: ARIAEngine.CFB(out,input);
     }
 
     input.close();
