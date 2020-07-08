@@ -661,6 +661,7 @@ class ARIAEngine {
     out.println();
     out.print("  plaintext : \n");
 
+    //CBC모드 암호화
     for (int i = 0; i < plain_block.length; i++) { // 초기 벡터와 이전 암호문을 이용한 xor.
       printBlock(out, plain_block[i]);
       out.println();
@@ -683,6 +684,26 @@ class ARIAEngine {
       printBlock(out, cipher_block[i]);
       out.println();
     }
+
+    //CBC모드 복호화
+    for(int i=0;i<cipher_block.length;i++){
+      aria.decrypt(cipher_block[i],0,xor,0);
+      if (i == 0) {
+        for(int j=0;j<16;j++)
+          plain_block[i][j] = (byte) (primeVec[j] ^ cipher_block[i][j]);
+      }
+      else{
+        for(int j=0;j<16;j++){
+          plain_block[i][j] = (byte) (cipher_block[i-1][j] ^ xor[j]);
+        }
+      }
+    }
+    out.print("  복호화한 plaintext: \n");
+    for (int i = 0; i < plain_block.length; i++) {
+      printBlock(out, plain_block[i]);
+      out.println();
+    }
+
   }
   public static void CTR(PrintStream out, Scanner input) throws InvalidKeyException {
     byte[][] plain_block = new byte[10][16];
@@ -750,7 +771,7 @@ class ARIAEngine {
     }
 
     // CTR모드 복호화
-    for(int i=0;i<plain_block.length;i++){
+    for(int i=0;i<cipher_block.length;i++){
       aria.encrypt(counter[i],0,xor,0);
       for(int j=0;j<16;j++)
         plain_block[i][j] = (byte)(xor[j]^cipher_block[i][j]);
